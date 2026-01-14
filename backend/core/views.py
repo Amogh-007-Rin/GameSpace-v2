@@ -11,6 +11,10 @@ from .serializers import (
 from django.db.models import Count, Q
 from .models import Game, LibraryEntry
 from .serializers import GameSerializer, LibraryEntrySerializer
+from itertools import chain
+from operator import attrgetter
+from .models import Follow, ForumThread
+from .serializers import ForumThreadSerializer
 
 User = get_user_model()
 
@@ -134,3 +138,98 @@ class ReviewCreateView(APIView):
             return Response({"success": False, "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 
+# --- 8. Follow User View (Page 17) ---
+class FollowUserView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, user_id):
+        # 1. Prevent Self-Follow (Sad Path Page 17)
+        if request.user.id == user_id:
+            return Response(
+                {"error": "You cannot follow yourself."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 2. Check if already following
+        if Follow.objects.filter(follower=request.user, following_id=user_id).exists():
+            return Response(
+                {"error": "You are already following this user."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 3. Create Follow
+        try:
+            Follow.objects.create(follower=request.user, following_id=user_id)
+            return Response({"success": True, "message": "Followed successfully."})
+        except Exception as e:
+            return Response({"error": "User not found or invalid ID."}, status=status.HTTP_404_NOT_FOUND)
+
+class UnfollowUserView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def delete(self, request, user_id):
+        deleted_count, _ = Follow.objects.filter(
+            follower=request.user, 
+            following_id=user_id
+        ).delete()
+        
+        if deleted_count > 0:
+            return Response({"success": True, "message": "Unfollowed successfully."})
+        return Response({"error": "You were not following this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- 9. Activity Feed View (Page 17 Complex Query) ---
+class ActivityFeedView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        # 1. Get list of user IDs I am following
+        following_ids = request.user.following.values_list('following_id', flat=True)
+
+        # 2. Fetch recent Reviews from these users
+        recent_reviews = Review.objects.filter(user_id__in=following_ids).select_related('user', 'game').order_by('-created_at')[:10]
+
+        # 3. Fetch recent Library Updates from these users
+        recent_library = LibraryEntry.objects.filter(user_id__in=following_ids).select_related('user', 'game').order_by('-added_at')[:10]
+
+        # 4. Combine and Sort in Python
+        # We transform them into a standardized dictionary format
+        feed_data = []
+
+        for r in recent_reviews:
+            feed_data.append({
+                "type": "REVIEW",
+                "user": r.user.username,
+                "game": r.game.title,
+                "rating": r.rating,
+                "timestamp": r.created_at
+            })
+
+        for l in recent_library:
+            feed_data.append({
+                "type": "STATUS",
+                "user": l.user.username,
+                "game": l.game.title,
+                "status": l.status,
+                "timestamp": l.added_at
+            })
+
+        # Sort combined list by timestamp descending (newest first)
+        feed_data.sort(key=lambda x: x['timestamp'], reverse=True)
+
+        return Response({"success": True, "data": feed_data})
+
+
+# --- 10. Forum Views ---
+class ForumThreadListCreateView(generics.ListCreateAPIView):
+    serializer_class = ForumThreadSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        game_id = self.kwargs['game_id']
+        return ForumThread.objects.filter(game_id=game_id).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        game_id = self.kwargs['game_id']
+        game = get_object_or_404(Game, pk=game_id)
+        serializer.save(user=self.request.user, game=game)

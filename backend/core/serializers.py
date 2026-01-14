@@ -81,3 +81,27 @@ class ReviewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         # Optional: Custom validation logic can go here
         return data
+    
+from .models import Follow, ForumThread
+
+# ... existing serializers ...
+
+# --- 7. Forum Serializer ---
+class ForumThreadSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = ForumThread
+        fields = ['id', 'game', 'user', 'username', 'title', 'content', 'created_at']
+        read_only_fields = ['user', 'created_at', 'game']
+
+# --- 8. Feed Item Serializer (Helper) ---
+# We don't use a ModelSerializer here because the Feed is a custom object
+class FeedItemSerializer(serializers.Serializer):
+    type = serializers.CharField()
+    user = serializers.CharField()
+    game = serializers.CharField()
+    # Optional fields depending on type
+    rating = serializers.IntegerField(required=False)
+    status = serializers.CharField(required=False)
+    timestamp = serializers.DateTimeField()
