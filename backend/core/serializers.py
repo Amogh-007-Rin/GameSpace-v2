@@ -48,9 +48,30 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class GameSerializer(serializers.ModelSerializer):
+    user_library_entry = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+
     class Meta:
         model = Game
         fields = '__all__'
+    
+    def get_user_library_entry(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            try:
+                entry = LibraryEntry.objects.get(user=request.user, game=obj)
+                return {
+                    'id': entry.id,
+                    'status': entry.status
+                }
+            except LibraryEntry.DoesNotExist:
+                return None
+        return None
+
+    def get_reviews(self, obj):
+        # Return last 5 reviews
+        reviews = obj.reviews.all().order_by('-created_at')[:5]
+        return ReviewSerializer(reviews, many=True).data
 
 # --- 5. Library Entry Serializer ---
 class LibraryEntrySerializer(serializers.ModelSerializer):

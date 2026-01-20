@@ -26,6 +26,18 @@ apiClient.interceptors.response.use(
         return response.data;
     },
     (error) => {
+        // Handle 401 Unauthorized (Invalid Token)
+        if (error.response && error.response.status === 401) {
+            // Only redirect if we actually had a token (to avoid loops if public endpoints return 401 for some reason)
+            if (localStorage.getItem('access_token')) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('user_data');
+                window.location.href = '/login';
+            }
+            return Promise.reject("Session expired. Please login again.");
+        }
+
         let message = "An unexpected error occurred";
         
         // Check if the backend sent a structured error

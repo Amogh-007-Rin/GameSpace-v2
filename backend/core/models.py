@@ -29,8 +29,9 @@ class Game(models.Model):
     publisher = models.CharField(max_length=255, blank=True)
     release_date = models.DateField(null=True, blank=True)
     cover_image_url = models.TextField(blank=True, null=True)
+    genre = models.CharField(max_length=100, blank=True)
     # Average rating is updated automatically when reviews are added
-    average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    average_rating = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
 
     def update_average_rating(self):
         # Calculate the average from all related reviews

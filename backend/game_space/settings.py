@@ -67,12 +67,8 @@ WSGI_APPLICATION = 'game_space.wsgi.application'
 # Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql', 
-        'NAME': 'game_space_db',       
-        'USER': 'root',                
-        'PASSWORD': '1234',   # Your Password
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

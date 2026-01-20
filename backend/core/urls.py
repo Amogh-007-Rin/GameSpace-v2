@@ -5,7 +5,7 @@ from .views import (
     CustomTokenObtainPairView, 
     UserProfileView,
     # Add these imports if you are in Phase 3 or later:
-    GameListView, LibraryEntryCreateView, LibraryEntryDetailView, 
+    GameListView, GameDetailView, LibraryEntryCreateView, LibraryEntryDetailView, 
     ReviewCreateView, FollowUserView, UnfollowUserView, ActivityFeedView, ForumThreadListCreateView
 )
 
@@ -18,7 +18,7 @@ urlpatterns = [
 
     # Game & Library Endpoints
     path('games/', GameListView.as_view(), name='game-list'),
-    path('games/<int:pk>/', GameListView.as_view(), name='game-detail'), # If you have a detail view logic reusing list view or separate
+    path('games/<int:pk>/', GameDetailView.as_view(), name='game-detail'), # If you have a detail view logic reusing list view or separate
     path('library/', LibraryEntryCreateView.as_view(), name='library-list-create'),
     path('library/<int:pk>/', LibraryEntryDetailView.as_view(), name='library-detail'),
 

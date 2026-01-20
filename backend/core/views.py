@@ -62,8 +62,23 @@ class GameListView(generics.ListAPIView):
             queryset = queryset.annotate(
                 popularity=Count('library_entries')
             ).order_by('-popularity')
+
+        # C. Filter by Genre
+        genre = self.request.query_params.get('genre', None)
+        if genre:
+            queryset = queryset.filter(genre__iexact=genre)
+
+        # D. Ordering
+        ordering = self.request.query_params.get('ordering', None)
+        if ordering in ['release_date', '-release_date', 'average_rating', '-average_rating', 'title', '-title']:
+            queryset = queryset.order_by(ordering)
             
         return queryset
+
+class GameDetailView(generics.RetrieveAPIView):
+    queryset = Game.objects.all()
+    serializer_class = GameSerializer
+    permission_classes = (AllowAny,)
 
 # --- 5. Library Management View (Page 16) ---
 class LibraryEntryCreateView(generics.ListCreateAPIView):
